@@ -4,7 +4,15 @@
 const ENDPOINT =
   'https://apis.data.go.kr/B090041/openapi/service/RiseSetInfoService/getAreaRiseSetInfo';
 
-const LOCATIONS = ['서울', '강릉', '속초', '포항', '울산', '부산', '제주', '독도', '여수', '대전'];
+// 천문연구원 API가 지원하는 64개 지역 (권역 구분은 화면에서 처리)
+const LOCATIONS = (
+  '서울 인천 수원 평택 ' +
+  '강릉 속초 동해 대관령 태백 춘천 원주 영월 ' +
+  '대전 세종 천안 청주 청주공항 충주 제천 보령 서산 추풍령 ' +
+  '광주 전주 군산 정읍 부안 남원 임실 장수 목포 무안 여수 여수공항 순천 승주 고흥 장흥 완도 해남 흑산도 ' +
+  '부산 대구 울산 포항 경주 영덕 울진 독도 안동 영주 춘양 상주 김천 의성 영천 밀양 진주 통영 거제 남해 거창 ' +
+  '제주 서귀포'
+).split(' ');
 
 const ONE_DAY = 24 * 60 * 60; // 초
 const memoryCache = new Map(); // 같은 인스턴스 안에서의 하루 캐시

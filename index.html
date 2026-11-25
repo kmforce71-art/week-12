@@ -7,134 +7,360 @@
   <style>
     :root {
       --bg1: #1d2b53; --bg2: #f6a56b;
-      --card: rgba(255, 255, 255, 0.92);
-      --ink: #1f2430; --muted: #6b7280;
+      --card: rgba(255, 255, 255, 0.94);
+      --ink: #1f2430; --muted: #6b7280; --line: #e3e6ee;
       --sun: #e8743b; --moon: #3b4f8f;
     }
     * { box-sizing: border-box; }
+    html { overflow-anchor: auto; }
     body {
       margin: 0; min-height: 100vh;
       font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
       color: var(--ink);
-      background: linear-gradient(180deg, var(--bg1) 0%, #6b5b95 55%, var(--bg2) 100%);
+      background: linear-gradient(180deg, var(--bg1) 0%, #6b5b95 45%, var(--bg2) 100%) fixed;
       display: flex; flex-direction: column; align-items: center;
-      padding: 32px 16px;
+      padding: 28px 16px;
     }
-    main { width: 100%; max-width: 560px; flex: 1; }
-    h1 { color: #fff; text-align: center; font-size: 1.8rem; margin: 8px 0 4px; letter-spacing: -0.02em; }
-    .date { color: rgba(255,255,255,0.85); text-align: center; margin: 0 0 24px; }
-    .card { background: var(--card); border-radius: 20px; padding: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.2); }
-    label { font-weight: 600; font-size: 0.95rem; }
-    select {
-      display: block; width: 100%; margin-top: 8px; padding: 10px 12px;
-      font-size: 1.05rem; border-radius: 10px; border: 1px solid #cfd3dc; background: #fff;
+    main { width: 100%; max-width: 600px; flex: 1; }
+    h1 { color: #fff; text-align: center; font-size: 1.8rem; margin: 4px 0 4px; letter-spacing: -0.02em; }
+    .date { color: rgba(255,255,255,0.85); text-align: center; margin: 0 0 18px; }
+
+    /* 보기 버튼 */
+    .views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 5px;
+             background: rgba(255,255,255,0.18); border-radius: 14px; margin-bottom: 14px; }
+    .views button {
+      border: 0; border-radius: 10px; padding: 9px 4px; cursor: pointer;
+      background: transparent; color: #fff; font: inherit; font-weight: 600; line-height: 1.25;
     }
-    .times { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
-    .time { text-align: center; padding: 20px 8px; border-radius: 16px; background: #fff7f0; }
+    .views button small { display: block; font-weight: 400; font-size: 0.75rem; opacity: 0.85; }
+    .views button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .views button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+    .card { background: var(--card); border-radius: 20px; padding: 22px; box-shadow: 0 12px 40px rgba(0,0,0,0.2); }
+    .card + .card { margin-top: 14px; }
+
+    .place { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .place b { font-size: 1.25rem; }
+    .place span { color: var(--muted); font-size: 0.9rem; }
+
+    .times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .time { text-align: center; padding: 18px 8px; border-radius: 16px; background: #fff7f0; border: 2px solid transparent; transition: border-color .2s; }
     .time.set { background: #eef1fb; }
+    .time.target.rise { border-color: var(--sun); }
+    .time.target.set { border-color: var(--moon); }
     .time .label { font-size: 0.95rem; color: var(--muted); }
     .time .value {
-      font-size: clamp(2.6rem, 11vw, 3.6rem); font-weight: 800;
-      font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-top: 4px;
+      font-size: clamp(2.5rem, 11vw, 3.5rem); font-weight: 800;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-top: 2px;
     }
     .time.rise .value { color: var(--sun); }
     .time.set .value { color: var(--moon); }
-    .time .sub { margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
+    .time .sub { margin-top: 8px; font-size: 0.82rem; color: var(--muted); }
     .time .sub b { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
-    .status { margin-top: 20px; text-align: center; color: var(--muted); min-height: 1.4em; }
-    .status.error { color: #b42318; background: #fef3f2; border-radius: 10px; padding: 12px; }
-    footer { margin-top: 28px; color: rgba(255,255,255,0.9); font-size: 0.85rem; text-align: center; }
+
+    .extra { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-top: 12px; }
+    .box { background: #f6f7fb; border-radius: 14px; padding: 12px 14px; min-height: 72px; }
+    .box .k { font-size: 0.82rem; color: var(--muted); }
+    .box .v { font-size: 1.15rem; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+    .status { margin: 12px 0 0; text-align: center; color: var(--muted); min-height: 1.4em; font-size: 0.92rem; }
+    .status.error { color: #b42318; background: #fef3f2; border-radius: 10px; padding: 10px; }
+
+    /* 지역 선택 */
+    .picker h2 { font-size: 1rem; margin: 0 0 10px; }
+    .search { width: 100%; padding: 10px 12px; font: inherit; font-size: 1rem; border-radius: 10px; border: 1px solid #cfd3dc; background: #fff; }
+    .group { margin-top: 14px; }
+    .group h3 { font-size: 0.82rem; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      border: 1px solid var(--line); background: #fff; color: var(--ink);
+      border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 0.92rem; cursor: pointer;
+    }
+    .chip:hover { border-color: #b9bfcc; }
+    .chip[aria-pressed="true"] { background: var(--moon); border-color: var(--moon); color: #fff; font-weight: 600; }
+    .empty { color: var(--muted); margin: 14px 0 0; font-size: 0.92rem; }
+    [hidden] { display: none !important; }
+
+    footer { margin-top: 24px; color: rgba(255,255,255,0.92); font-size: 0.85rem; text-align: center; }
   </style>
 </head>
 <body>
   <main>
     <h1>일출 · 일몰 시각</h1>
-    <p class="date" id="date"></p>
+    <p class="date" id="today"></p>
 
-    <div class="card">
-      <label for="location">지역</label>
-      <select id="location">
-        <option>서울</option><option>강릉</option><option>속초</option>
-        <option>포항</option><option>울산</option><option>부산</option>
-        <option>제주</option><option>독도</option><option>여수</option>
-        <option>대전</option>
-      </select>
+    <div class="views" role="group" aria-label="보기">
+      <button type="button" data-view="today">오늘<small id="vd-today"></small></button>
+      <button type="button" data-view="newyear">새해 첫 일출<small id="vd-newyear"></small></button>
+      <button type="button" data-view="lastsunset">올해 마지막 일몰<small id="vd-lastsunset"></small></button>
+    </div>
+
+    <section class="card" aria-live="polite">
+      <div class="place"><b id="place">서울</b><span id="placeDate"></span></div>
 
       <div class="times">
-        <div class="time rise">
+        <div class="time rise" id="riseBox">
           <div class="label">🌅 해 뜨는 시각</div>
           <div class="value" id="sunrise">--:--</div>
           <div class="sub">하늘이 밝아지는 시각 <b id="civilm">--:--</b></div>
         </div>
-        <div class="time set">
+        <div class="time set" id="setBox">
           <div class="label">🌇 해 지는 시각</div>
           <div class="value" id="sunset">--:--</div>
           <div class="sub">하늘이 어두워지는 시각 <b id="civile">--:--</b></div>
         </div>
       </div>
 
+      <div class="extra">
+        <div class="box"><div class="k" id="cdLabel">남은 시간</div><div class="v" id="countdown">-</div></div>
+        <div class="box"><div class="k">낮 길이</div><div class="v" id="daylen">-</div></div>
+      </div>
+
       <p class="status" id="status" role="status"></p>
-    </div>
+    </section>
+
+    <section class="card picker">
+      <h2>지역</h2>
+      <input class="search" id="search" type="search" placeholder="지역 이름 검색 (예: 강릉, 제주)" autocomplete="off" aria-label="지역 이름 검색" />
+      <div id="groups"></div>
+      <p class="empty" id="empty" hidden>검색 결과가 없습니다.</p>
+    </section>
   </main>
 
   <footer>자료: 한국천문연구원 · 공공데이터포털</footer>
 
   <script>
     const $ = (id) => document.getElementById(id);
-    const fields = ['sunrise', 'sunset', 'civilm', 'civile'];
 
-    // 한국 시간 기준 오늘
-    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const y = kst.getUTCFullYear();
-    const m = String(kst.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(kst.getUTCDate()).padStart(2, '0');
-    const today = `${y}${m}${d}`;
-    const weekday = '일월화수목금토'[kst.getUTCDay()];
-    $('date').textContent = `${y}년 ${Number(m)}월 ${Number(d)}일 (${weekday}) · 한국 시간 기준`;
+    const REGIONS = {
+      '수도권': '서울 인천 수원 평택',
+      '강원': '강릉 속초 동해 대관령 태백 춘천 원주 영월',
+      '충청': '대전 세종 천안 청주 청주공항 충주 제천 보령 서산 추풍령',
+      '전라': '광주 전주 군산 정읍 부안 남원 임실 장수 목포 무안 여수 여수공항 순천 승주 고흥 장흥 완도 해남 흑산도',
+      '경상': '부산 대구 울산 포항 경주 영덕 울진 독도 안동 영주 춘양 상주 김천 의성 영천 밀양 진주 통영 거제 남해 거창',
+      '제주': '제주 서귀포',
+    };
+    const ALL = Object.values(REGIONS).join(' ').split(' ');
 
-    // 마지막으로 고른 지역 기억
+    // ---- 저장 (localStorage를 못 쓰는 환경에서도 동작) ----
     const store = {
       get(k) { try { return localStorage.getItem(k); } catch { return null; } },
       set(k, v) { try { localStorage.setItem(k, v); } catch {} },
     };
-    const saved = store.get('location');
-    if (saved) $('location').value = saved;
+
+    // ---- 한국 시간 도우미 ----
+    const KST = 9 * 3600 * 1000;
+    function kstParts(ms = Date.now()) {
+      const d = new Date(ms + KST);
+      return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(), wd: d.getUTCDay() };
+    }
+    const ymd = (y, m, d) => `${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`;
+    // 'YYYYMMDD' + 'HH:MM' (한국 시간) → 실제 시각(ms)
+    function kstTime(date, hhmm) {
+      const [h, mi] = hhmm.split(':').map(Number);
+      return Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8), h, mi) - KST;
+    }
+    function addDays(date, n) {
+      const t = new Date(Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8) + n));
+      return ymd(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate());
+    }
+    function prettyDate(date) {
+      const t = new Date(Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8)));
+      return `${t.getUTCFullYear()}년 ${t.getUTCMonth() + 1}월 ${t.getUTCDate()}일 (${'일월화수목금토'[t.getUTCDay()]})`;
+    }
+    function fmtLeft(ms) {
+      const s = Math.max(0, Math.floor(ms / 1000));
+      const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+      const parts = [];
+      if (d) parts.push(`${d}일`);
+      if (d || h) parts.push(`${h}시간`);
+      if (d || h || m) parts.push(`${m}분`);
+      parts.push(`${sec}초`);
+      return parts.join(' ');
+    }
+    function fmtDuration(min) {
+      return `${Math.floor(min / 60)}시간 ${min % 60}분`;
+    }
+
+    // ---- 상태 ----
+    let view = ['today', 'newyear', 'lastsunset'].includes(store.get('view')) ? store.get('view') : 'today';
+    let place = ALL.includes(store.get('location')) ? store.get('location') : '서울';
+    let todayStr = '';
+    let current = null;   // { date, data, target, label }
+    let reqId = 0;
+    const cache = new Map();
+
+    function datesFor() {
+      const p = kstParts();
+      return { today: ymd(p.y, p.m, p.d), newyear: ymd(p.y + 1, 1, 1), lastsunset: ymd(p.y, 12, 31) };
+    }
+
+    function renderHeader() {
+      const p = kstParts();
+      todayStr = ymd(p.y, p.m, p.d);
+      $('today').textContent = `${prettyDate(todayStr)} · 한국 시간 기준`;
+      $('vd-today').textContent = `${p.m}.${p.d}`;
+      $('vd-newyear').textContent = `${p.y + 1}.1.1`;
+      $('vd-lastsunset').textContent = `${p.y}.12.31`;
+      document.querySelectorAll('.views button').forEach((b) =>
+        b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+    }
+
+    // ---- 지역 목록 ----
+    function buildPicker() {
+      const wrap = $('groups');
+      for (const [region, names] of Object.entries(REGIONS)) {
+        const g = document.createElement('div');
+        g.className = 'group';
+        g.innerHTML = `<h3>${region}</h3><div class="chips"></div>`;
+        for (const name of names.split(' ')) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'chip';
+          b.textContent = name;
+          b.dataset.name = name;
+          b.setAttribute('aria-pressed', String(name === place));
+          g.querySelector('.chips').appendChild(b);
+        }
+        wrap.appendChild(g);
+      }
+      // 클릭: 목록을 다시 그리지 않고 선택 표시만 바꿔서 화면이 움직이지 않게 함
+      wrap.addEventListener('click', (e) => {
+        const b = e.target.closest('.chip');
+        if (!b || b.dataset.name === place) return;
+        e.preventDefault();
+        wrap.querySelectorAll('.chip[aria-pressed="true"]').forEach((c) => c.setAttribute('aria-pressed', 'false'));
+        b.setAttribute('aria-pressed', 'true');
+        place = b.dataset.name;
+        store.set('location', place);
+        load();
+      });
+      // 버튼을 누를 때 포커스 때문에 스크롤되지 않도록
+      wrap.addEventListener('mousedown', (e) => { if (e.target.closest('.chip')) e.preventDefault(); });
+
+      $('search').addEventListener('input', () => {
+        const q = $('search').value.trim();
+        let shown = 0;
+        wrap.querySelectorAll('.group').forEach((g) => {
+          let any = false;
+          g.querySelectorAll('.chip').forEach((c) => {
+            const ok = !q || c.dataset.name.includes(q);
+            c.hidden = !ok;
+            if (ok) { any = true; shown++; }
+          });
+          g.hidden = !any;
+        });
+        $('empty').hidden = shown > 0;
+      });
+    }
+
+    // ---- 데이터 ----
+    async function fetchDay(date, loc) {
+      const key = `${date}|${loc}`;
+      if (cache.has(key)) return cache.get(key);
+      const res = await fetch(`/api/sunrise?location=${encodeURIComponent(loc)}&date=${date}`);
+      let data;
+      try { data = await res.json(); } catch { data = null; }
+      if (!res.ok || !data) {
+        throw new Error(
+          (data && data.error) ||
+          (res.status === 404 ? '서버 함수(/api/sunrise)를 찾을 수 없습니다.' : `서버 오류가 발생했습니다. (${res.status})`)
+        );
+      }
+      cache.set(key, data);
+      return data;
+    }
 
     function setStatus(text, isError) {
       $('status').textContent = text;
       $('status').className = 'status' + (isError ? ' error' : '');
     }
 
+    function showDay(date, data) {
+      $('placeDate').textContent = prettyDate(date);
+      for (const f of ['sunrise', 'sunset', 'civilm', 'civile']) $(f).textContent = data[f] || '--:--';
+      const len = (kstTime(date, data.sunset) - kstTime(date, data.sunrise)) / 60000;
+      $('daylen').textContent = len > 0 ? fmtDuration(len) : '-';
+    }
+
+    // 오늘 보기: 다음 일출/일몰, 해가 졌으면 내일 일출
+    async function pickTodayTarget(id) {
+      const date = todayStr;
+      const data = await fetchDay(date, place);
+      const now = Date.now();
+      const rise = kstTime(date, data.sunrise), set = kstTime(date, data.sunset);
+      if (now < rise) return { date, data, target: rise, which: 'rise', label: '일출까지' };
+      if (now < set) return { date, data, target: set, which: 'set', label: '일몰까지' };
+      const tmr = addDays(date, 1);
+      const t = await fetchDay(tmr, place);
+      return { date, data, target: kstTime(tmr, t.sunrise), which: 'rise', label: `내일 일출(${t.sunrise})까지` };
+    }
+
     async function load() {
-      const location = $('location').value;
-      store.set('location', location);
-      fields.forEach((f) => ($(f).textContent = '--:--'));
+      const id = ++reqId;
+      $('place').textContent = place;
       setStatus('불러오는 중…');
-
       try {
-        const res = await fetch(`/api/sunrise?location=${encodeURIComponent(location)}&date=${today}`);
-        let data;
-        try { data = await res.json(); } catch { data = null; }
-
-        if (!res.ok || !data) {
-          throw new Error(
-            (data && data.error) ||
-            (res.status === 404 ? '서버 함수(/api/sunrise)를 찾을 수 없습니다. vercel dev 또는 배포 환경에서 열어 주세요.'
-                                : `서버 오류가 발생했습니다. (${res.status})`)
-          );
+        let next;
+        if (view === 'today') {
+          next = await pickTodayTarget(id);
+        } else {
+          const date = datesFor()[view];
+          const data = await fetchDay(date, place);
+          next = view === 'newyear'
+            ? { date, data, target: kstTime(date, data.sunrise), which: 'rise', label: '새해 첫 일출까지' }
+            : { date, data, target: kstTime(date, data.sunset), which: 'set', label: '올해 마지막 일몰까지' };
         }
-        fields.forEach((f) => ($(f).textContent = data[f] || '--:--'));
+        if (id !== reqId) return; // 더 최근 요청이 있으면 무시
+        current = next;
+        showDay(next.date, next.data);
+        $('riseBox').classList.toggle('target', next.which === 'rise');
+        $('setBox').classList.toggle('target', next.which === 'set');
         setStatus('');
+        tick();
       } catch (e) {
-        const msg = e instanceof TypeError
-          ? '네트워크에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.'
-          : e.message;
+        if (id !== reqId) return;
+        current = null;
+        for (const f of ['sunrise', 'sunset', 'civilm', 'civile']) $(f).textContent = '--:--';
+        $('countdown').textContent = '-';
+        $('daylen').textContent = '-';
+        $('riseBox').classList.remove('target');
+        $('setBox').classList.remove('target');
+        const msg = e instanceof TypeError ? '네트워크에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.' : e.message;
         setStatus('⚠️ ' + msg, true);
       }
     }
 
-    $('location').addEventListener('change', load);
+    // ---- 1초마다 남은 시간 갱신 ----
+    function tick() {
+      const p = kstParts();
+      if (ymd(p.y, p.m, p.d) !== todayStr) { renderHeader(); load(); return; } // 자정이 지나면 새로 계산
+      if (!current) return;
+      const left = current.target - Date.now();
+      if (left <= 0) {
+        if (view === 'today') { load(); return; } // 해가 뜨거나 지면 다음 목표로
+        $('cdLabel').textContent = current.label.replace('까지', '');
+        $('countdown').textContent = '이미 지났습니다';
+        return;
+      }
+      $('cdLabel').textContent = current.label + ' 남은 시간';
+      $('countdown').textContent = fmtLeft(left);
+    }
+
+    // ---- 시작 ----
+    document.querySelector('.views').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b || b.dataset.view === view) return;
+      view = b.dataset.view;
+      store.set('view', view);
+      renderHeader();
+      load();
+    });
+
+    renderHeader();
+    buildPicker();
     load();
+    setInterval(tick, 1000);
   </script>
 </body>
 </html>
