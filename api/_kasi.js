@@ -118,4 +118,45 @@ async function fetchDay(date, location, cacheMs = DAY_MS) {
   return { data, cached: false };
 }
 
-module.exports = { LOCATIONS, ApiError, todayKST, send, fetchDay, DAY_MS };
+// ---- 여러 날·여러 지역을 연달아 조회할 때 (api/month.js, api/rank.js) ----
+// 공공데이터포털은 한꺼번에 많이 부르면 잠시 막으므로, 같은 인스턴스 안의 모든 호출을 150ms 간격으로 줄 세웁니다.
+const GAP_MS = 150;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let queue = Promise.resolve();
+let lastCall = 0;
+function throttled(fn) {
+  const run = queue.then(async () => {
+    const wait = lastCall + GAP_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+    try {
+      return await fn();
+    } finally {
+      lastCall = Date.now();
+    }
+  });
+  queue = run.catch(() => {});
+  return run;
+}
+
+// 하루치 조회 (메모리 캐시에 있으면 줄을 서지 않음). 연결 실패일 때만 1초 쉬고 한 번 더 시도.
+async function fetchDaySpaced(date, location, cacheMs) {
+  const hit = dayCache.get(`${date}|${location}`);
+  if (hit && hit.expires > Date.now()) return hit.data;
+  const once = () => throttled(() => fetchDay(date, location, cacheMs)).then((r) => r.data);
+  try {
+    return await once();
+  } catch (e) {
+    const retryable = e instanceof ApiError && e.status === 502 && /연결하지 못했습니다/.test(e.message);
+    if (!retryable) throw e;
+    await sleep(1000);
+    return once();
+  }
+}
+
+// 조회 가능한 범위: 올해 1월 1일 ~ 내년 12월 31일 (한국 시간 기준)
+function yearRange() {
+  const y = Number(todayKST().slice(0, 4));
+  return { from: y, to: y + 1 };
+}
+
+module.exports = { LOCATIONS, ApiError, todayKST, send, fetchDay, fetchDaySpaced, yearRange, DAY_MS };

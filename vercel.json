@@ -1,6 +1,7 @@
 {
   "regions": ["icn1"],
   "functions": {
-    "api/month.js": { "maxDuration": 60 }
+    "api/month.js": { "maxDuration": 60 },
+    "api/rank.js": { "maxDuration": 60 }
   }
 }

@@ -2,115 +2,165 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1d2b53" />
   <title>일출 · 일몰 시각</title>
   <style>
     :root {
-      --bg1: #1d2b53; --bg2: #f6a56b;
-      --card: rgba(255, 255, 255, 0.94);
-      --ink: #1f2430; --muted: #6b7280; --line: #e3e6ee;
-      --sun: #e8743b; --moon: #3b4f8f;
+      --ink: #1c2130; --muted: #6b7280; --line: #e4e7ee; --soft: #f5f6fa;
+      --sun: #e8743b; --moon: #3b4f8f; --accent: #3b4f8f;
+      --radius: 18px;
     }
     * { box-sizing: border-box; }
-    html { overflow-anchor: auto; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
-      margin: 0; min-height: 100vh;
+      margin: 0; min-height: 100vh; color: var(--ink);
       font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
-      color: var(--ink);
-      background: linear-gradient(180deg, var(--bg1) 0%, #6b5b95 45%, var(--bg2) 100%) fixed;
-      display: flex; flex-direction: column; align-items: center;
-      padding: 28px 16px;
+      background: #1d2b53;
     }
-    main { width: 100%; max-width: 600px; flex: 1; }
-    h1 { color: #fff; text-align: center; font-size: 1.8rem; margin: 4px 0 4px; letter-spacing: -0.02em; }
-    .date { color: rgba(255,255,255,0.85); text-align: center; margin: 0 0 18px; }
-
-    /* 보기 버튼 */
-    .views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 5px;
-             background: rgba(255,255,255,0.18); border-radius: 14px; margin-bottom: 14px; }
-    .views button {
-      border: 0; border-radius: 10px; padding: 9px 4px; cursor: pointer;
-      background: transparent; color: #fff; font: inherit; font-weight: 600; line-height: 1.25;
+    /* 배경 그라데이션: 두 겹을 겹쳐 두고 보기에 따라 위 겹을 서서히 나타나게 */
+    body::before, body::after {
+      content: ""; position: fixed; inset: 0; z-index: -1; transition: opacity .8s ease;
     }
-    .views button small { display: block; font-weight: 400; font-size: 0.75rem; opacity: 0.85; }
-    .views button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    .views button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    body::before { background: linear-gradient(180deg, #172554 0%, #3b3f7a 38%, #b45f5f 72%, #f59e5b 100%); }   /* 남색 → 주황 */
+    body::after  { background: linear-gradient(180deg, #3b1f63 0%, #6b2c7a 38%, #b3324f 72%, #e2483d 100%); opacity: 0; } /* 보라 → 붉은색 */
+    body.dusk::after { opacity: 1; }
 
-    .card { background: var(--card); border-radius: 20px; padding: 22px; box-shadow: 0 12px 40px rgba(0,0,0,0.2); }
-    .card + .card { margin-top: 14px; }
-
-    .place { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-    .place b { font-size: 1.25rem; }
-    .place span { color: var(--muted); font-size: 0.9rem; }
-
-    .times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
-    .time { text-align: center; padding: 18px 8px; border-radius: 16px; background: #fff7f0; border: 2px solid transparent; transition: border-color .2s; }
-    .time.set { background: #eef1fb; }
-    .time.target.rise { border-color: var(--sun); }
-    .time.target.set { border-color: var(--moon); }
-    .time .label { font-size: 0.95rem; color: var(--muted); }
-    .time .value {
-      font-size: clamp(2.5rem, 11vw, 3.5rem); font-weight: 800;
-      font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-top: 2px;
-    }
-    .time.rise .value { color: var(--sun); }
-    .time.set .value { color: var(--moon); }
-    .time .sub { margin-top: 8px; font-size: 0.82rem; color: var(--muted); }
-    .time .sub b { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
-
-    .extra { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-top: 12px; }
-    .box { background: #f6f7fb; border-radius: 14px; padding: 12px 14px; min-height: 72px; }
-    .box .k { font-size: 0.82rem; color: var(--muted); }
-    .box .v { font-size: 1.15rem; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
-
-    .status { margin: 12px 0 0; text-align: center; color: var(--muted); min-height: 1.4em; font-size: 0.92rem; }
-    .status.error { color: #b42318; background: #fef3f2; border-radius: 10px; padding: 10px; }
-
-    /* 지역 선택 */
-    .picker h2 { font-size: 1rem; margin: 0 0 10px; }
-    .search { width: 100%; padding: 10px 12px; font: inherit; font-size: 1rem; border-radius: 10px; border: 1px solid #cfd3dc; background: #fff; }
-    .group { margin-top: 14px; }
-    .group h3 { font-size: 0.82rem; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    .chip {
-      border: 1px solid var(--line); background: #fff; color: var(--ink);
-      border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 0.92rem; cursor: pointer;
-    }
-    .chip:hover { border-color: #b9bfcc; }
-    .chip[aria-pressed="true"] { background: var(--moon); border-color: var(--moon); color: #fff; font-weight: 600; }
-    .empty { color: var(--muted); margin: 14px 0 0; font-size: 0.92rem; }
+    .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px 28px; }
+    svg.i { width: 1.15em; height: 1.15em; flex: none; vertical-align: -0.2em;
+            fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    button { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .card :focus-visible { outline-color: var(--accent); }
     [hidden] { display: none !important; }
 
-    /* 월별 */
-    .mhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .mhead h2 { font-size: 1rem; margin: 0; }
-    .mhead h2 span { color: var(--muted); font-weight: 600; }
-    .seg { display: inline-flex; background: #eef0f5; border-radius: 10px; padding: 3px; }
-    .seg button { border: 0; background: transparent; font: inherit; font-size: 0.88rem; padding: 5px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
-    .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
-    .mnav { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 6px; }
-    .mnav b { font-size: 1.1rem; }
-    .mnav button { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 6px 10px; font: inherit; font-size: 0.88rem; cursor: pointer; }
-    .mnav button:disabled { opacity: 0.35; cursor: default; }
+    /* ---------- 맨 위 ---------- */
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #fff; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 8px; font-size: 1.15rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+    .brand svg.i { width: 1.5em; height: 1.5em; }
+    .today { font-size: 0.9rem; opacity: 0.85; }
 
-    .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-top: 8px; }
+    .views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; margin: 16px 0 0;
+             background: rgba(255,255,255,0.14); border-radius: 14px; backdrop-filter: blur(6px); }
+    .views button { border: 0; border-radius: 11px; padding: 9px 6px; cursor: pointer; background: transparent;
+                    color: #fff; font-weight: 600; line-height: 1.25; min-height: 48px; }
+    .views button small { display: block; font-weight: 400; font-size: 0.74rem; opacity: 0.8; }
+    .views button:hover { background: rgba(255,255,255,0.1); }
+    .views button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 2px 10px rgba(0,0,0,0.18); }
+
+    .hero { color: #fff; text-align: center; padding: 26px 0 8px; }
+    .place { display: inline-flex; align-items: center; gap: 6px; font-size: 1.25rem; font-weight: 700; }
+    .place-date { font-size: 0.9rem; opacity: 0.8; margin-top: 4px; }
+    .big { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .big.single { grid-template-columns: 1fr; }
+    .bt { transition: opacity .4s; }
+    .bt .lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 0.95rem; opacity: 0.9; }
+    .bt .tm { font-size: clamp(2.9rem, 13vw, 6.2rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05;
+              font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .big.single .bt .tm { font-size: clamp(3.6rem, 19vw, 7.5rem); }
+    .bt.past { opacity: 0.38; }
+    .bt .tag { display: inline-block; font-size: 0.72rem; padding: 1px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.7);
+               margin-left: 4px; vertical-align: 0.1em; }
+    .bt .other { font-size: 0.9rem; opacity: 0.8; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+    .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 18px; }
+    .tile { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px;
+            padding: 12px 14px; color: #fff; backdrop-filter: blur(6px); min-height: 78px; }
+    .tile .k { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; opacity: 0.85; }
+    .tile .v { font-size: 1.25rem; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+    .tile.count .v { font-size: 1.1rem; }
+
+    .status { min-height: 1.5em; margin: 10px 0 0; text-align: center; color: rgba(255,255,255,0.85); font-size: 0.9rem; }
+    .status.error, .note.error { color: #b42318; background: #fef3f2; border-radius: 10px; padding: 10px 12px;
+                                 display: flex; gap: 8px; align-items: flex-start; text-align: left; }
+
+    /* ---------- 아래 카드 ---------- */
+    .grid { display: grid; gap: 14px; margin-top: 14px; }
+    .card { background: rgba(255,255,255,0.97); border-radius: var(--radius); padding: 18px; box-shadow: 0 10px 34px rgba(0,0,0,0.18); min-width: 0; }
+    .chead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .chead h2 { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; margin: 0; }
+    .chead h2 svg.i { color: var(--accent); }
+    .chead h2 small { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+    .seg { display: inline-flex; background: #eef0f5; border-radius: 10px; padding: 3px; }
+    .seg button { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; font-size: 0.88rem;
+                  padding: 6px 11px; border-radius: 8px; cursor: pointer; color: var(--muted); min-height: 36px; }
+    .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+    .note { color: var(--muted); font-size: 0.88rem; margin: 8px 0 0; min-height: 1.3em; }
+
+    /* 지역 선택 */
+    .searchbox { position: relative; }
+    .searchbox svg.i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+    .search { width: 100%; padding: 11px 12px 11px 38px; font: inherit; font-size: 1rem; border-radius: 11px;
+              border: 1px solid #cfd3dc; background: #fff; }
+    .chosen { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.92rem; color: var(--muted); }
+    .chosen b { color: var(--ink); }
+
+    .map { position: relative; margin-top: 8px; }
+    .map svg { display: block; width: 100%; height: auto; max-height: 560px; touch-action: manipulation; }
+    .map .land { fill: #eef1f7; stroke: #c9cfdc; stroke-width: 1.2; }
+    .map .dot { cursor: pointer; outline: none; }
+    .map .dot .hit { fill: transparent; }
+    .map .dot .pt { fill: #8792ad; stroke: #fff; stroke-width: 1.5; transition: r .15s; }
+    .map .dot:hover .pt, .map .dot:focus-visible .pt { stroke: var(--ink); stroke-width: 2; }
+    .map .dot.dim { opacity: 0.18; }
+    .map .dot.sel .pt { stroke: var(--ink); stroke-width: 2.5; }
+    .map .lab { font-size: 12px; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 3.5px; stroke-linejoin: round;
+                pointer-events: none; font-weight: 600; }
+    .map .lab.minor { display: none; }
+    .map .dot.sel .lab, .map .dot:hover .lab, .map .dot:focus-visible .lab { display: block; font-size: 13.5px; }
+    .scale { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
+    .scale .bar { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #f97316, #4f46e5); max-width: 220px; }
+
+    .group { margin-top: 14px; }
+    .group h3 { font-size: 0.8rem; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 7px 13px; font-size: 0.92rem;
+            cursor: pointer; min-height: 38px; }
+    .chip:hover { border-color: #b9bfcc; }
+    .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+    /* 전국 순위 */
+    .rank { display: flex; flex-direction: column; }
+    .mine { display: flex; align-items: center; gap: 10px; background: var(--soft); border-radius: 12px; padding: 10px 12px; font-size: 0.92rem; }
+    .mine .no { font-size: 1.5rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .rlist { position: relative; list-style: none; margin: 10px 0 0; padding: 0; overflow-y: auto; max-height: 420px; flex: 1;
+             border-top: 1px solid var(--line); overscroll-behavior: contain; }
+    .rlist li { display: grid; grid-template-columns: 2.2em 5.2em 1fr 3.4em 3.6em; align-items: center; gap: 8px;
+                padding: 7px 6px; border-bottom: 1px solid #f0f1f5; cursor: pointer; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+    .rlist li:hover { background: var(--soft); }
+    .rlist li.sel { background: #e8ecf8; font-weight: 700; }
+    .rlist .n { color: var(--muted); text-align: right; }
+    .rlist li:nth-child(-n+3) .n { color: var(--sun); font-weight: 800; }
+    .rlist .b { height: 6px; border-radius: 3px; background: #eef0f5; overflow: hidden; }
+    .rlist .b i { display: block; height: 100%; border-radius: 3px; }
+    .rlist .t { font-weight: 600; text-align: right; }
+    .rlist .d { color: var(--muted); font-size: 0.8rem; text-align: right; }
+
+    /* 월별 */
+    .mnav { display: flex; justify-content: space-between; align-items: center; margin: 2px 0 6px; }
+    .mnav b { font-size: 1.1rem; }
+    .mnav button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: #fff; border-radius: 10px;
+                   padding: 6px 10px; font-size: 0.88rem; cursor: pointer; min-height: 38px; }
+    .mnav button:disabled { opacity: 0.35; cursor: default; }
+    #mBody { transition: opacity .2s; }
+    .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-top: 6px; }
     .cal .wd { text-align: center; font-size: 0.78rem; color: var(--muted); padding: 4px 0; font-weight: 600; }
     .cal .wd.sun, .cal .day.sun .n { color: #d64545; }
     .cal .wd.sat, .cal .day.sat .n { color: #3b63c4; }
-    .cal .day { background: #f6f7fb; border-radius: 8px; padding: 4px 2px 5px; text-align: center; min-height: 58px;
+    .cal .day { background: var(--soft); border-radius: 8px; padding: 4px 2px 5px; text-align: center; min-height: 58px;
                 border: 2px solid transparent; font-variant-numeric: tabular-nums; line-height: 1.25; }
     .cal .day .n { font-size: 0.82rem; font-weight: 700; display: block; margin-bottom: 1px; }
     .cal .day .r, .cal .day .s { display: block; font-size: 0.7rem; letter-spacing: -0.02em; }
     .cal .day .r { color: var(--sun); }
     .cal .day .s { color: var(--moon); }
     .cal .blank { background: transparent; }
-    .day.today, tr.today td { background: #ffe8d6 !important; }
+    .day.today, tr.today td { background: #ffe3cc !important; }
     .day.ny { border-color: var(--sun); }
     .day.ye { border-color: var(--moon); }
-
-    .mtable { width: 100%; border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; font-size: 0.92rem; }
-    .mtable th { text-align: left; font-size: 0.8rem; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); }
-    .mtable td { padding: 6px 8px; border-bottom: 1px solid #f0f1f5; }
+    .tablewrap { overflow-x: auto; }
+    .mtable { width: 100%; border-collapse: collapse; margin-top: 6px; font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+    .mtable th { text-align: left; font-size: 0.8rem; color: var(--muted); font-weight: 600; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .mtable td { padding: 7px 8px; border-bottom: 1px solid #f0f1f5; white-space: nowrap; }
     .mtable td.r { color: var(--sun); font-weight: 600; }
     .mtable td.s { color: var(--moon); font-weight: 600; }
     .mtable tr.sun td:first-child { color: #d64545; }
@@ -120,81 +170,177 @@
     .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; font-size: 0.78rem; color: var(--muted); }
     .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
 
-    footer { margin-top: 24px; color: rgba(255,255,255,0.92); font-size: 0.85rem; text-align: center; }
+    footer { color: rgba(255,255,255,0.9); font-size: 0.85rem; text-align: center; margin-top: 22px; padding-bottom: env(safe-area-inset-bottom); }
+
+    /* ---------- 좁은 휴대폰 ---------- */
+    @media (max-width: 400px) {
+      .wrap { padding-left: 12px; padding-right: 12px; }
+      .views button { font-size: 0.84rem; letter-spacing: -0.03em; padding: 8px 2px; }
+      .tile { padding: 10px 12px; }
+      .tile .v { font-size: 1.12rem; }
+      .tile.count .v { font-size: 0.98rem; }
+      .card { padding: 16px 14px; }
+      .rlist li { grid-template-columns: 2em 4.8em 1fr 3.2em 3.2em; gap: 6px; font-size: 0.86rem; }
+    }
+    /* ---------- 태블릿 ---------- */
+    @media (min-width: 640px) {
+      .wrap { padding-left: 24px; padding-right: 24px; }
+      .tiles { grid-template-columns: repeat(4, 1fr); }
+      .views { max-width: 560px; margin-left: auto; margin-right: auto; }
+      .card { padding: 22px; }
+      .cal .day { min-height: 66px; }
+      .cal .day .r, .cal .day .s { font-size: 0.78rem; }
+    }
+    /* ---------- 데스크톱 ---------- */
+    @media (min-width: 1000px) {
+      .wrap { padding-top: 28px; }
+      .hero { padding-top: 34px; }
+      .big { max-width: 860px; margin-left: auto; margin-right: auto; }
+      .tiles { max-width: 980px; margin-left: auto; margin-right: auto; }
+      .grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: stretch; }
+      .grid .month { grid-column: 1 / -1; }
+      .rlist { max-height: none; min-height: 0; flex-basis: 0; }
+      .cal .day { min-height: 76px; padding-top: 6px; }
+      .cal .day .n { font-size: 0.9rem; }
+      .cal .day .r, .cal .day .s { font-size: 0.85rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { body::before, body::after, .bt { transition: none; } }
   </style>
 </head>
 <body>
-  <main>
-    <h1>일출 · 일몰 시각</h1>
-    <p class="date" id="today"></p>
+  <!-- 선 아이콘 -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-sunrise" viewBox="0 0 24 24"><path d="M3 19h18"/><path d="M7 19a5 5 0 0 1 10 0"/><path d="M12 3v6"/><path d="M9 6l3-3 3 3"/><path d="M4.5 12.5l1.5 1.5"/><path d="M19.5 12.5L18 14"/></symbol>
+      <symbol id="i-sunset" viewBox="0 0 24 24"><path d="M3 19h18"/><path d="M7 19a5 5 0 0 1 10 0"/><path d="M12 9V3"/><path d="M9 6l3 3 3-3"/><path d="M4.5 12.5l1.5 1.5"/><path d="M19.5 12.5L18 14"/></symbol>
+      <symbol id="i-dawn" viewBox="0 0 24 24"><path d="M3 19h18"/><path d="M8 19a4 4 0 0 1 8 0"/><path d="M12 9v2"/><path d="M5.6 12.6l1.4 1.4"/><path d="M18.4 12.6L17 14"/><path d="M3 15.5h1.5"/><path d="M19.5 15.5H21"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+      <symbol id="i-timer" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12"/><path d="M7 3v2.5a5 5 0 0 0 10 0V3"/><path d="M7 21v-2.5a5 5 0 0 1 10 0V21"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+      <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M6 21v-7M11 21V5M16 21v-10M21 21v-4"/></symbol>
+      <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+      <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 10v10"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4.5M12 16h.01"/></symbol>
+    </defs>
+  </svg>
 
-    <div class="views" role="group" aria-label="보기">
+  <div class="wrap">
+    <header class="top">
+      <h1 class="brand"><svg class="i"><use href="#i-sunrise"/></svg>일출 · 일몰 시각</h1>
+      <div class="today" id="today"></div>
+    </header>
+
+    <nav class="views" role="group" aria-label="보기">
       <button type="button" data-view="today">오늘<small id="vd-today"></small></button>
       <button type="button" data-view="newyear">새해 첫 일출<small id="vd-newyear"></small></button>
       <button type="button" data-view="lastsunset">올해 마지막 일몰<small id="vd-lastsunset"></small></button>
+    </nav>
+
+    <!-- 맨 위: 고른 지역 시각 -->
+    <section class="hero" aria-live="polite">
+      <div class="place"><svg class="i"><use href="#i-pin"/></svg><span id="place">서울</span></div>
+      <div class="place-date" id="placeDate">&nbsp;</div>
+      <div class="big" id="big">
+        <div class="bt" id="btRise">
+          <div class="lbl"><svg class="i"><use href="#i-sunrise"/></svg><span id="riseLbl">해 뜨는 시각</span><span class="tag" id="riseTag" hidden>지남</span></div>
+          <div class="tm" id="sunrise">--:--</div>
+          <div class="other" id="riseOther" hidden></div>
+        </div>
+        <div class="bt" id="btSet">
+          <div class="lbl"><svg class="i"><use href="#i-sunset"/></svg><span id="setLbl">해 지는 시각</span><span class="tag" id="setTag" hidden>지남</span></div>
+          <div class="tm" id="sunset">--:--</div>
+          <div class="other" id="setOther" hidden></div>
+        </div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><div class="k"><svg class="i"><use href="#i-dawn"/></svg>밝아지는 시각</div><div class="v" id="civilm">--:--</div></div>
+        <div class="tile"><div class="k"><svg class="i"><use href="#i-moon"/></svg>어두워지는 시각</div><div class="v" id="civile">--:--</div></div>
+        <div class="tile"><div class="k"><svg class="i"><use href="#i-sun"/></svg>낮 길이</div><div class="v" id="daylen">-</div></div>
+        <div class="tile count"><div class="k"><svg class="i"><use href="#i-timer"/></svg><span id="cdLabel">남은 시간</span></div><div class="v" id="countdown">-</div></div>
+      </div>
+      <div class="status" id="status" role="status"></div>
+    </section>
+
+    <div class="grid">
+      <!-- 지역 선택 -->
+      <section class="card picker" aria-labelledby="pickTitle">
+        <div class="chead">
+          <h2 id="pickTitle"><svg class="i"><use href="#i-pin"/></svg>지역 선택</h2>
+          <div class="seg" role="group" aria-label="지역 선택 방식">
+            <button type="button" data-pick="map"><svg class="i"><use href="#i-map"/></svg>지도</button>
+            <button type="button" data-pick="list"><svg class="i"><use href="#i-list"/></svg>목록</button>
+          </div>
+        </div>
+        <div class="searchbox">
+          <svg class="i"><use href="#i-search"/></svg>
+          <input class="search" id="search" type="search" placeholder="지역 이름 검색 (예: 강릉, 제주)" autocomplete="off" aria-label="지역 이름 검색" />
+        </div>
+        <div class="chosen"><svg class="i"><use href="#i-pin"/></svg>선택한 지역 <b id="chosen"></b></div>
+
+        <div class="map" id="mapView">
+          <svg id="mapSvg" viewBox="0 0 570 580" role="group" aria-label="지역 지도"></svg>
+          <div class="scale" id="mapScale" hidden><span id="scaleMin"></span><span class="bar"></span><span id="scaleMax"></span><span id="scaleWhat"></span></div>
+        </div>
+        <div id="listView" hidden>
+          <div id="groups"></div>
+        </div>
+        <p class="note" id="empty" hidden>검색 결과가 없습니다.</p>
+      </section>
+
+      <!-- 전국 순위 -->
+      <section class="card rank" aria-labelledby="rankTitle">
+        <div class="chead">
+          <h2 id="rankTitle"><svg class="i"><use href="#i-chart"/></svg>전국 순위 <small id="rankDate"></small></h2>
+          <div class="seg" role="group" aria-label="순위 기준">
+            <button type="button" data-metric="rise"><svg class="i"><use href="#i-sunrise"/></svg>빨리 뜨는 순</button>
+            <button type="button" data-metric="set"><svg class="i"><use href="#i-sunset"/></svg>늦게 지는 순</button>
+          </div>
+        </div>
+        <div class="mine" id="mine">-</div>
+        <p class="note" id="rankStatus" role="status"></p>
+        <ol class="rlist" id="rlist" aria-label="전국 순위 목록"></ol>
+      </section>
+
+      <!-- 월별 -->
+      <section class="card month" id="monthCard" aria-labelledby="monthTitle">
+        <div class="chead">
+          <h2 id="monthTitle"><svg class="i"><use href="#i-cal"/></svg>월별 일출 · 일몰 <small id="mPlace"></small></h2>
+          <div class="seg" role="group" aria-label="월별 보기 방식">
+            <button type="button" data-mode="cal"><svg class="i"><use href="#i-cal"/></svg>달력</button>
+            <button type="button" data-mode="table"><svg class="i"><use href="#i-table"/></svg>표</button>
+          </div>
+        </div>
+        <div class="mnav">
+          <button type="button" id="mPrev" aria-label="이전 달"><svg class="i"><use href="#i-left"/></svg>이전 달</button>
+          <b id="mTitle"></b>
+          <button type="button" id="mNext" aria-label="다음 달">다음 달<svg class="i"><use href="#i-right"/></svg></button>
+        </div>
+        <p class="note" id="mStatus" role="status"></p>
+        <div id="mBody"></div>
+        <div class="legend">
+          <span><i style="background:#ffe3cc"></i>오늘</span>
+          <span><i style="border:2px solid var(--sun)"></i>1월 1일</span>
+          <span><i style="border:2px solid var(--moon)"></i>12월 31일</span>
+          <span style="color:var(--sun)">■ 해 뜨는 시각</span>
+          <span style="color:var(--moon)">■ 해 지는 시각</span>
+        </div>
+      </section>
     </div>
 
-    <section class="card" aria-live="polite">
-      <div class="place"><b id="place">서울</b><span id="placeDate"></span></div>
-
-      <div class="times">
-        <div class="time rise" id="riseBox">
-          <div class="label">🌅 해 뜨는 시각</div>
-          <div class="value" id="sunrise">--:--</div>
-          <div class="sub">하늘이 밝아지는 시각 <b id="civilm">--:--</b></div>
-        </div>
-        <div class="time set" id="setBox">
-          <div class="label">🌇 해 지는 시각</div>
-          <div class="value" id="sunset">--:--</div>
-          <div class="sub">하늘이 어두워지는 시각 <b id="civile">--:--</b></div>
-        </div>
-      </div>
-
-      <div class="extra">
-        <div class="box"><div class="k" id="cdLabel">남은 시간</div><div class="v" id="countdown">-</div></div>
-        <div class="box"><div class="k">낮 길이</div><div class="v" id="daylen">-</div></div>
-      </div>
-
-      <p class="status" id="status" role="status"></p>
-    </section>
-
-    <section class="card picker">
-      <h2>지역</h2>
-      <input class="search" id="search" type="search" placeholder="지역 이름 검색 (예: 강릉, 제주)" autocomplete="off" aria-label="지역 이름 검색" />
-      <div id="groups"></div>
-      <p class="empty" id="empty" hidden>검색 결과가 없습니다.</p>
-    </section>
-
-    <section class="card" id="monthCard">
-      <div class="mhead">
-        <h2>월별 일출 · 일몰 <span id="mPlace"></span></h2>
-        <div class="seg" role="group" aria-label="월별 보기 방식">
-          <button type="button" data-mode="cal">달력</button>
-          <button type="button" data-mode="table">표</button>
-        </div>
-      </div>
-      <div class="mnav">
-        <button type="button" id="mPrev" aria-label="이전 달">◀ 이전 달</button>
-        <b id="mTitle"></b>
-        <button type="button" id="mNext" aria-label="다음 달">다음 달 ▶</button>
-      </div>
-      <p class="status" id="mStatus" role="status"></p>
-      <div id="mBody"></div>
-      <div class="legend">
-        <span><i style="background:#ffe8d6"></i>오늘</span>
-        <span><i style="border:2px solid var(--sun)"></i>1월 1일</span>
-        <span><i style="border:2px solid var(--moon)"></i>12월 31일</span>
-        <span style="color:var(--sun)">■ 해 뜨는 시각</span>
-        <span style="color:var(--moon)">■ 해 지는 시각</span>
-      </div>
-    </section>
-  </main>
-
-  <footer>자료: 한국천문연구원 · 공공데이터포털</footer>
+    <footer>자료: 한국천문연구원 · 공공데이터포털</footer>
+  </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
+    const icon = (name) => `<svg class="i" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
+    // ---------- 지역 ----------
     const REGIONS = {
       '수도권': '서울 인천 수원 평택',
       '강원': '강릉 속초 동해 대관령 태백 춘천 원주 영월',
@@ -204,21 +350,24 @@
       '제주': '제주 서귀포',
     };
     const ALL = Object.values(REGIONS).join(' ').split(' ');
+    // 경도·위도 (한국천문연구원 API의 longitudeNum / latitudeNum)
+    const COORD = {"서울":[126.983,37.567],"인천":[126.7,37.45],"수원":[127.033,37.267],"평택":[127.117,37],"강릉":[128.883,37.75],"속초":[128.6,38.2],"동해":[129.117,37.517],"대관령":[128.733,37.683],"태백":[128.983,37.167],"춘천":[127.733,37.883],"원주":[127.917,37.35],"영월":[128.467,37.183],"대전":[127.383,36.35],"세종":[127.283,36.483],"천안":[127.117,36.817],"청주":[127.483,36.633],"청주공항":[127.5,36.717],"충주":[127.933,36.983],"제천":[128.183,37.133],"보령":[126.617,36.333],"서산":[126.45,36.783],"추풍령":[128,36.217],"광주":[126.85,35.167],"전주":[127.15,35.817],"군산":[126.733,35.967],"정읍":[126.85,35.567],"부안":[126.733,35.733],"남원":[127.383,35.417],"임실":[127.283,35.617],"장수":[127.517,35.65],"목포":[126.383,34.817],"무안":[126.483,34.983],"여수":[127.667,34.767],"여수공항":[127.617,34.833],"순천":[127.483,34.95],"승주":[127.25,35.067],"고흥":[127.283,34.617],"장흥":[126.9,34.683],"완도":[126.75,34.317],"해남":[126.6,34.567],"흑산도":[125.433,34.683],"부산":[129.083,35.183],"대구":[128.6,35.867],"울산":[129.317,35.533],"포항":[129.35,36.017],"경주":[129.217,35.85],"영덕":[129.367,36.417],"울진":[129.4,37],"독도":[131.867,37.233],"안동":[128.733,36.567],"영주":[128.617,36.8],"춘양":[128.967,36.95],"상주":[128.167,36.417],"김천":[128.117,36.133],"의성":[128.7,36.35],"영천":[128.933,35.967],"밀양":[128.75,35.5],"진주":[128.117,35.183],"통영":[128.433,34.85],"거제":[128.617,34.883],"남해":[127.9,34.833],"거창":[127.917,35.683],"제주":[126.533,33.5],"서귀포":[126.567,33.25]};
+    const MAJOR = ['서울', '춘천', '강릉', '대전', '청주', '전주', '광주', '대구', '부산', '울산', '포항', '목포', '여수', '제주', '독도', '흑산도'];
 
-    // ---- 저장 (localStorage를 못 쓰는 환경에서도 동작) ----
+    // ---------- 저장 ----------
     const store = {
       get(k) { try { return localStorage.getItem(k); } catch { return null; } },
       set(k, v) { try { localStorage.setItem(k, v); } catch {} },
     };
 
-    // ---- 한국 시간 도우미 ----
+    // ---------- 한국 시간 도우미 ----------
     const KST = 9 * 3600 * 1000;
     function kstParts(ms = Date.now()) {
       const d = new Date(ms + KST);
-      return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(), wd: d.getUTCDay() };
+      return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() };
     }
     const ymd = (y, m, d) => `${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`;
-    // 'YYYYMMDD' + 'HH:MM' (한국 시간) → 실제 시각(ms)
+    const toMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
     function kstTime(date, hhmm) {
       const [h, mi] = hhmm.split(':').map(Number);
       return Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8), h, mi) - KST;
@@ -227,50 +376,235 @@
       const t = new Date(Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8) + n));
       return ymd(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate());
     }
-    function prettyDate(date) {
-      const t = new Date(Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8)));
-      return `${t.getUTCFullYear()}년 ${t.getUTCMonth() + 1}월 ${t.getUTCDate()}일 (${'일월화수목금토'[t.getUTCDay()]})`;
-    }
+    const weekdayOf = (date) => new Date(Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8))).getUTCDay();
+    const prettyDate = (date) => `${+date.slice(0, 4)}년 ${+date.slice(4, 6)}월 ${+date.slice(6, 8)}일 (${'일월화수목금토'[weekdayOf(date)]})`;
     function fmtLeft(ms) {
       const s = Math.max(0, Math.floor(ms / 1000));
       const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-      const parts = [];
-      if (d) parts.push(`${d}일`);
-      if (d || h) parts.push(`${h}시간`);
-      if (d || h || m) parts.push(`${m}분`);
-      parts.push(`${sec}초`);
-      return parts.join(' ');
+      const p = [];
+      if (d) p.push(`${d}일`);
+      if (d || h) p.push(`${h}시간`);
+      if (d || h || m) p.push(`${m}분`);
+      p.push(`${sec}초`);
+      return p.join(' ');
     }
-    function fmtDuration(min) {
-      return `${Math.floor(min / 60)}시간 ${min % 60}분`;
+    const fmtDuration = (min) => `${Math.floor(min / 60)}시간 ${min % 60}분`;
+    const errText = (e) => e instanceof TypeError ? '네트워크에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.' : e.message;
+    function showError(el, e) {
+      el.className = el.className.replace(/\berror\b/, '') + ' error';
+      el.innerHTML = icon('alert') + `<span>${errText(e)}</span>`;
+    }
+    function clearStatus(el, text = '') {
+      el.className = el.className.replace(/\s*\berror\b/, '');
+      el.textContent = text;
     }
 
-    // ---- 상태 ----
-    let view = ['today', 'newyear', 'lastsunset'].includes(store.get('view')) ? store.get('view') : 'today';
+    async function getJSON(url) {
+      const res = await fetch(url);
+      let data;
+      try { data = await res.json(); } catch { data = null; }
+      if (!res.ok || !data) {
+        throw new Error((data && data.error) ||
+          (res.status === 404 ? '서버 함수를 찾을 수 없습니다.' : `서버 오류가 발생했습니다. (${res.status})`));
+      }
+      return data;
+    }
+
+    // ---------- 상태 ----------
+    const VIEWS = ['today', 'newyear', 'lastsunset'];
+    let view = VIEWS.includes(store.get('view')) ? store.get('view') : 'today';
     let place = ALL.includes(store.get('location')) ? store.get('location') : '서울';
+    let pickMode = store.get('pickMode') === 'list' ? 'list' : 'map';
+    let metric = view === 'lastsunset' ? 'set' : 'rise';
     let todayStr = '';
-    let current = null;   // { date, data, target, label }
+    let current = null;
     let reqId = 0;
-    const cache = new Map();
+    const dayCache = new Map();
 
-    function datesFor() {
+    function viewDate(v) {
       const p = kstParts();
-      return { today: ymd(p.y, p.m, p.d), newyear: ymd(p.y + 1, 1, 1), lastsunset: ymd(p.y, 12, 31) };
+      return { today: ymd(p.y, p.m, p.d), newyear: ymd(p.y + 1, 1, 1), lastsunset: ymd(p.y, 12, 31) }[v];
     }
 
-    function renderHeader() {
+    function renderTop() {
       const p = kstParts();
       todayStr = ymd(p.y, p.m, p.d);
-      $('today').textContent = `${prettyDate(todayStr)} · 한국 시간 기준`;
+      $('today').textContent = `${prettyDate(todayStr)} · 한국 시간`;
       $('vd-today').textContent = `${p.m}.${p.d}`;
       $('vd-newyear').textContent = `${p.y + 1}.1.1`;
       $('vd-lastsunset').textContent = `${p.y}.12.31`;
-      document.querySelectorAll('.views button').forEach((b) =>
-        b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+      document.querySelectorAll('.views button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+      document.body.classList.toggle('dusk', view === 'lastsunset');
+      document.querySelector('meta[name="theme-color"]').content = view === 'lastsunset' ? '#3b1f63' : '#172554';
+      // 보기 모양: 오늘은 나란히, 나머지는 해당 시각 하나만 크게
+      $('big').classList.toggle('single', view !== 'today');
+      $('btRise').hidden = view === 'lastsunset';
+      $('btSet').hidden = view === 'newyear';
+      $('riseLbl').textContent = view === 'newyear' ? '새해 첫 일출' : '해 뜨는 시각';
+      $('setLbl').textContent = view === 'lastsunset' ? '올해 마지막 일몰' : '해 지는 시각';
     }
 
-    // ---- 지역 목록 ----
-    function buildPicker() {
+    // ---------- 맨 위 시각 ----------
+    async function fetchDay(date, loc) {
+      const key = `${date}|${loc}`;
+      if (!dayCache.has(key)) dayCache.set(key, getJSON(`/api/sunrise?location=${encodeURIComponent(loc)}&date=${date}`).catch((e) => { dayCache.delete(key); throw e; }));
+      return dayCache.get(key);
+    }
+
+    async function pickTarget() {
+      if (view === 'today') {
+        const date = todayStr;
+        const data = await fetchDay(date, place);
+        const now = Date.now(), rise = kstTime(date, data.sunrise), set = kstTime(date, data.sunset);
+        if (now < rise) return { date, data, target: rise, label: '일출까지' };
+        if (now < set) return { date, data, target: set, label: '일몰까지' };
+        const tmr = addDays(date, 1);
+        const t = await fetchDay(tmr, place);
+        return { date, data, target: kstTime(tmr, t.sunrise), label: '내일 일출까지', hint: `내일 해 뜨는 시각 ${t.sunrise}` };
+      }
+      const date = viewDate(view);
+      const data = await fetchDay(date, place);
+      return view === 'newyear'
+        ? { date, data, target: kstTime(date, data.sunrise), label: '새해 첫 일출까지' }
+        : { date, data, target: kstTime(date, data.sunset), label: '올해 마지막 일몰까지' };
+    }
+
+    async function load() {
+      const id = ++reqId;
+      $('place').textContent = place;
+      clearStatus($('status'), '불러오는 중…');
+      try {
+        const next = await pickTarget();
+        if (id !== reqId) return;
+        current = next;
+        const { date, data } = next;
+        $('placeDate').textContent = prettyDate(date);
+        $('sunrise').textContent = data.sunrise;
+        $('sunset').textContent = data.sunset;
+        $('riseOther').textContent = `해 지는 시각 ${data.sunset}`;
+        $('setOther').textContent = `해 뜨는 시각 ${data.sunrise}`;
+        $('riseOther').hidden = view !== 'newyear';
+        $('setOther').hidden = view !== 'lastsunset';
+        $('civilm').textContent = data.civilm || '--:--';
+        $('civile').textContent = data.civile || '--:--';
+        $('daylen').textContent = fmtDuration(toMin(data.sunset) - toMin(data.sunrise));
+        clearStatus($('status'));
+        tick();
+      } catch (e) {
+        if (id !== reqId) return;
+        current = null;
+        for (const f of ['sunrise', 'sunset', 'civilm', 'civile']) $(f).textContent = '--:--';
+        $('daylen').textContent = '-';
+        $('countdown').textContent = '-';
+        $('riseTag').hidden = $('setTag').hidden = true;
+        $('btRise').classList.remove('past'); $('btSet').classList.remove('past');
+        showError($('status'), e);
+      }
+    }
+
+    function tick() {
+      const p = kstParts();
+      if (ymd(p.y, p.m, p.d) !== todayStr) { renderTop(); load(); loadRank(); loadMonth(); return; }
+      if (!current) return;
+      const now = Date.now();
+      // 오늘 보기: 지난 시각은 흐리게
+      const isToday = view === 'today';
+      const risePast = isToday && now >= kstTime(current.date, current.data.sunrise);
+      const setPast = isToday && now >= kstTime(current.date, current.data.sunset);
+      $('btRise').classList.toggle('past', risePast); $('riseTag').hidden = !risePast;
+      $('btSet').classList.toggle('past', setPast); $('setTag').hidden = !setPast;
+
+      const left = current.target - now;
+      if (left <= 0) {
+        if (isToday) { load(); return; }
+        $('cdLabel').textContent = current.label.replace('까지', '');
+        $('countdown').textContent = '이미 지났습니다';
+        return;
+      }
+      $('cdLabel').textContent = current.label;
+      $('countdown').textContent = fmtLeft(left);
+      $('countdown').title = current.hint || '';
+    }
+
+    // ---------- 지역 선택: 지도 ----------
+    const LON0 = 125.1, LAT0 = 38.75, KX = 80.9, KY = 100; // 위도 36° 부근 비율로 맞춘 간단한 투영
+    const proj = ([lon, lat]) => [(lon - LON0) * KX, (LAT0 - lat) * KY];
+    // 대략적인 남한 해안선 (경도, 위도)
+    const OUTLINE = [[126.55,37.78],[126.68,37.95],[126.98,38.05],[127.2,38.28],[127.55,38.32],[128.05,38.28],[128.36,38.62],[128.55,38.3],[128.6,38.15],[128.75,37.95],[128.95,37.75],[129.1,37.55],[129.25,37.3],[129.35,37.1],[129.42,36.8],[129.43,36.5],[129.4,36.2],[129.57,36.07],[129.45,35.9],[129.48,35.6],[129.4,35.4],[129.2,35.2],[129.0,35.05],[128.75,35.1],[128.6,34.95],[128.7,34.75],[128.45,34.85],[128.35,34.85],[128.1,34.95],[127.95,34.8],[127.8,34.95],[127.7,34.75],[127.6,34.65],[127.45,34.85],[127.3,34.6],[127.2,34.5],[127.0,34.65],[126.9,34.5],[126.75,34.4],[126.6,34.3],[126.45,34.45],[126.3,34.6],[126.4,34.8],[126.3,35.0],[126.4,35.15],[126.35,35.4],[126.5,35.6],[126.6,35.8],[126.7,36.0],[126.55,36.2],[126.5,36.45],[126.35,36.6],[126.15,36.75],[126.3,36.9],[126.5,36.95],[126.75,37.0],[126.85,37.15],[126.65,37.35],[126.6,37.5],[126.5,37.65]];
+    const NS = 'http://www.w3.org/2000/svg';
+    const dotEls = {};
+
+    function buildMap() {
+      const svg = $('mapSvg');
+      const land = OUTLINE.map(proj).map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('') + 'Z';
+      const [jx, jy] = proj([126.55, 33.38]);
+      const [ux, uy] = proj([130.87, 37.5]);
+      svg.innerHTML = `<path class="land" d="${land}"/>` +
+        `<ellipse class="land" cx="${jx}" cy="${jy}" rx="27" ry="17"/>` +
+        `<circle class="land" cx="${ux}" cy="${uy}" r="5"/>`;
+      // 남쪽(아래)에 있는 지역을 나중에 그려 겹칠 때 위에 오도록
+      const order = [...ALL].sort((a, b) => COORD[b][1] - COORD[a][1]);
+      for (const name of order) {
+        const [x, y] = proj(COORD[name]);
+        const g = document.createElementNS(NS, 'g');
+        g.setAttribute('class', 'dot');
+        g.setAttribute('tabindex', '0');
+        g.setAttribute('role', 'button');
+        g.setAttribute('aria-label', name);
+        g.dataset.name = name;
+        const right = x < 470; // 오른쪽 끝(독도)은 이름을 왼쪽에
+        g.innerHTML = `<title>${name}</title><circle class="hit" cx="${x}" cy="${y}" r="12"/>` +
+          `<circle class="pt" cx="${x}" cy="${y}" r="5"/>` +
+          `<text class="lab ${MAJOR.includes(name) ? '' : 'minor'}" x="${right ? x + 8 : x - 8}" y="${y + 4}" text-anchor="${right ? 'start' : 'end'}">${name}</text>`;
+        svg.appendChild(g);
+        dotEls[name] = g;
+      }
+      svg.addEventListener('click', (e) => {
+        const g = e.target.closest('.dot');
+        if (g) selectPlace(g.dataset.name, 'map');
+      });
+      svg.addEventListener('keydown', (e) => {
+        const g = e.target.closest('.dot');
+        if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); selectPlace(g.dataset.name, 'map'); }
+      });
+    }
+
+    function paintMap() {
+      for (const [name, g] of Object.entries(dotEls)) {
+        const sel = name === place;
+        g.classList.toggle('sel', sel);
+        g.querySelector('.pt').setAttribute('r', sel ? 8 : 5);
+        if (sel) g.parentNode.appendChild(g); // 선택한 점은 맨 위에
+      }
+      // 순위 자료가 있으면 시각에 따라 색칠 (빠름/늦음)
+      const items = rankData && rankData.items;
+      if (!items) {
+        $('mapScale').hidden = true;
+        for (const g of Object.values(dotEls)) g.querySelector('.pt').style.fill = '';
+        return;
+      }
+      const key = metric === 'rise' ? 'sunrise' : 'sunset';
+      const vals = items.map((it) => toMin(it[key]));
+      const min = Math.min(...vals), max = Math.max(...vals);
+      for (const it of items) {
+        const t = max === min ? 0 : (toMin(it[key]) - min) / (max - min);
+        // 해 뜨는 순: 빠를수록 주황 / 해 지는 순: 늦을수록 주황
+        const g = dotEls[it.location];
+        if (g) g.querySelector('.pt').style.fill = mix(metric === 'rise' ? t : 1 - t);
+      }
+      const fmt = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+      $('scaleMin').textContent = metric === 'rise' ? fmt(min) : fmt(max);
+      $('scaleMax').textContent = metric === 'rise' ? fmt(max) : fmt(min);
+      $('scaleWhat').textContent = metric === 'rise' ? '해 뜨는 시각' : '해 지는 시각';
+      $('mapScale').hidden = false;
+    }
+    function mix(t) { // #f97316 → #4f46e5
+      const a = [249, 115, 22], b = [79, 70, 229];
+      return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',')})`;
+    }
+
+    // ---------- 지역 선택: 목록 ----------
+    function buildList() {
       const wrap = $('groups');
       for (const [region, names] of Object.entries(REGIONS)) {
         const g = document.createElement('div');
@@ -282,159 +616,148 @@
           b.className = 'chip';
           b.textContent = name;
           b.dataset.name = name;
-          b.setAttribute('aria-pressed', String(name === place));
           g.querySelector('.chips').appendChild(b);
         }
         wrap.appendChild(g);
       }
-      // 클릭: 목록을 다시 그리지 않고 선택 표시만 바꿔서 화면이 움직이지 않게 함
       wrap.addEventListener('click', (e) => {
         const b = e.target.closest('.chip');
-        if (!b || b.dataset.name === place) return;
-        e.preventDefault();
-        wrap.querySelectorAll('.chip[aria-pressed="true"]').forEach((c) => c.setAttribute('aria-pressed', 'false'));
-        b.setAttribute('aria-pressed', 'true');
-        place = b.dataset.name;
-        store.set('location', place);
-        load();
-        loadMonth();
+        if (b) selectPlace(b.dataset.name, 'list');
       });
-      // 버튼을 누를 때 포커스 때문에 스크롤되지 않도록
+      // 마우스로 누를 때 포커스 이동으로 화면이 움직이지 않게
       wrap.addEventListener('mousedown', (e) => { if (e.target.closest('.chip')) e.preventDefault(); });
+      $('mapSvg').addEventListener('mousedown', (e) => { if (e.target.closest('.dot')) e.preventDefault(); });
+    }
 
-      $('search').addEventListener('input', () => {
-        const q = $('search').value.trim();
-        let shown = 0;
-        wrap.querySelectorAll('.group').forEach((g) => {
-          let any = false;
-          g.querySelectorAll('.chip').forEach((c) => {
-            const ok = !q || c.dataset.name.includes(q);
-            c.hidden = !ok;
-            if (ok) { any = true; shown++; }
-          });
-          g.hidden = !any;
+    function applySearch() {
+      const q = $('search').value.trim();
+      let shown = 0;
+      document.querySelectorAll('#groups .group').forEach((g) => {
+        let any = false;
+        g.querySelectorAll('.chip').forEach((c) => {
+          const ok = !q || c.dataset.name.includes(q);
+          c.hidden = !ok;
+          if (ok) { any = true; shown++; }
         });
-        $('empty').hidden = shown > 0;
+        g.hidden = !any;
       });
+      for (const [name, g] of Object.entries(dotEls)) g.classList.toggle('dim', !!q && !name.includes(q));
+      $('empty').hidden = shown > 0;
     }
 
-    // ---- 데이터 ----
-    async function fetchDay(date, loc) {
-      const key = `${date}|${loc}`;
-      if (cache.has(key)) return cache.get(key);
-      const res = await fetch(`/api/sunrise?location=${encodeURIComponent(loc)}&date=${date}`);
-      let data;
-      try { data = await res.json(); } catch { data = null; }
-      if (!res.ok || !data) {
-        throw new Error(
-          (data && data.error) ||
-          (res.status === 404 ? '서버 함수(/api/sunrise)를 찾을 수 없습니다.' : `서버 오류가 발생했습니다. (${res.status})`)
-        );
+    function setPickMode(m) {
+      pickMode = m;
+      store.set('pickMode', m);
+      $('mapView').hidden = m !== 'map';
+      $('listView').hidden = m !== 'list';
+      document.querySelectorAll('[data-pick]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pick === m)));
+    }
+
+    // 지역을 고르면: 목록·지도·순위 표시만 바꾸고 다시 그리지 않아서 화면이 움직이지 않음
+    function selectPlace(name, from) {
+      if (name === place) return;
+      place = name;
+      store.set('location', place);
+      $('chosen').textContent = place;
+      document.querySelectorAll('#groups .chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.name === place)));
+      paintMap();
+      markRank(from !== 'rank');
+      load();
+      loadMonth();
+    }
+
+    // ---------- 전국 순위 ----------
+    let rankData = null;
+    let rankReq = 0;
+    const rankCache = new Map();
+
+    async function loadRank() {
+      const id = ++rankReq;
+      const date = viewDate(view);
+      $('rankDate').textContent = `· ${+date.slice(4, 6)}월 ${+date.slice(6)}일${view === 'newyear' ? ` (${date.slice(0, 4)}년)` : ''}`;
+      document.querySelectorAll('[data-metric]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.metric === metric)));
+      if (!rankCache.has(date)) {
+        rankData = null;
+        paintMap();
+        $('rlist').innerHTML = '';
+        $('mine').textContent = '-';
+        clearStatus($('rankStatus'), '64개 지역을 하나씩 불러오는 중… (처음엔 20초쯤 걸려요)');
+        rankCache.set(date, getJSON(`/api/rank?date=${date}`).catch((e) => { rankCache.delete(date); throw e; }));
       }
-      cache.set(key, data);
-      return data;
-    }
-
-    function setStatus(text, isError) {
-      $('status').textContent = text;
-      $('status').className = 'status' + (isError ? ' error' : '');
-    }
-
-    function showDay(date, data) {
-      $('placeDate').textContent = prettyDate(date);
-      for (const f of ['sunrise', 'sunset', 'civilm', 'civile']) $(f).textContent = data[f] || '--:--';
-      const len = (kstTime(date, data.sunset) - kstTime(date, data.sunrise)) / 60000;
-      $('daylen').textContent = len > 0 ? fmtDuration(len) : '-';
-    }
-
-    // 오늘 보기: 다음 일출/일몰, 해가 졌으면 내일 일출
-    async function pickTodayTarget(id) {
-      const date = todayStr;
-      const data = await fetchDay(date, place);
-      const now = Date.now();
-      const rise = kstTime(date, data.sunrise), set = kstTime(date, data.sunset);
-      if (now < rise) return { date, data, target: rise, which: 'rise', label: '일출까지' };
-      if (now < set) return { date, data, target: set, which: 'set', label: '일몰까지' };
-      const tmr = addDays(date, 1);
-      const t = await fetchDay(tmr, place);
-      return { date, data, target: kstTime(tmr, t.sunrise), which: 'rise', label: `내일 일출(${t.sunrise})까지` };
-    }
-
-    async function load() {
-      const id = ++reqId;
-      $('place').textContent = place;
-      setStatus('불러오는 중…');
       try {
-        let next;
-        if (view === 'today') {
-          next = await pickTodayTarget(id);
-        } else {
-          const date = datesFor()[view];
-          const data = await fetchDay(date, place);
-          next = view === 'newyear'
-            ? { date, data, target: kstTime(date, data.sunrise), which: 'rise', label: '새해 첫 일출까지' }
-            : { date, data, target: kstTime(date, data.sunset), which: 'set', label: '올해 마지막 일몰까지' };
-        }
-        if (id !== reqId) return; // 더 최근 요청이 있으면 무시
-        current = next;
-        showDay(next.date, next.data);
-        $('riseBox').classList.toggle('target', next.which === 'rise');
-        $('setBox').classList.toggle('target', next.which === 'set');
-        setStatus('');
-        tick();
+        const data = await rankCache.get(date);
+        if (id !== rankReq) return;
+        rankData = data;
+        clearStatus($('rankStatus'));
+        renderRank();
+        paintMap();
       } catch (e) {
-        if (id !== reqId) return;
-        current = null;
-        for (const f of ['sunrise', 'sunset', 'civilm', 'civile']) $(f).textContent = '--:--';
-        $('countdown').textContent = '-';
-        $('daylen').textContent = '-';
-        $('riseBox').classList.remove('target');
-        $('setBox').classList.remove('target');
-        const msg = e instanceof TypeError ? '네트워크에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.' : e.message;
-        setStatus('⚠️ ' + msg, true);
+        if (id !== rankReq) return;
+        showError($('rankStatus'), e);
       }
     }
 
-    // ---- 1초마다 남은 시간 갱신 ----
-    function tick() {
-      const p = kstParts();
-      if (ymd(p.y, p.m, p.d) !== todayStr) { renderHeader(); load(); loadMonth(); return; } // 자정이 지나면 새로 계산
-      if (!current) return;
-      const left = current.target - Date.now();
-      if (left <= 0) {
-        if (view === 'today') { load(); return; } // 해가 뜨거나 지면 다음 목표로
-        $('cdLabel').textContent = current.label.replace('까지', '');
-        $('countdown').textContent = '이미 지났습니다';
-        return;
-      }
-      $('cdLabel').textContent = current.label + ' 남은 시간';
-      $('countdown').textContent = fmtLeft(left);
+    function sortedRank() {
+      const key = metric === 'rise' ? 'sunrise' : 'sunset';
+      const dir = metric === 'rise' ? 1 : -1;
+      return [...rankData.items].sort((a, b) => dir * (toMin(a[key]) - toMin(b[key])) || a.location.localeCompare(b.location, 'ko'));
     }
 
-    // ---- 월별 일출·일몰 ----
+    function renderRank() {
+      if (!rankData) return;
+      const key = metric === 'rise' ? 'sunrise' : 'sunset';
+      const list = sortedRank();
+      const first = toMin(list[0][key]), last = toMin(list[list.length - 1][key]);
+      const span = Math.abs(last - first) || 1;
+      let rankNo = 0, prev = null;
+      $('rlist').innerHTML = list.map((it, i) => {
+        const v = toMin(it[key]);
+        if (v !== prev) { rankNo = i + 1; prev = v; } // 같은 시각은 같은 순위
+        const diff = Math.abs(v - first);
+        const t = diff / span;
+        return `<li data-name="${it.location}" data-rank="${rankNo}">` +
+          `<span class="n">${rankNo}</span><span>${it.location}</span>` +
+          `<span class="b"><i style="width:${Math.max(4, (1 - t) * 100)}%;background:${mix(t)}"></i></span>` +
+          `<span class="t">${it[key]}</span><span class="d">${diff ? (metric === 'rise' ? '+' : '−') + diff + '분' : '1위'}</span></li>`;
+      }).join('');
+      markRank(true);
+    }
+
+    function markRank(scrollList) {
+      if (!rankData) return;
+      const ul = $('rlist');
+      ul.querySelectorAll('li.sel').forEach((li) => li.classList.remove('sel'));
+      const li = ul.querySelector(`li[data-name="${place}"]`);
+      if (!li) return;
+      li.classList.add('sel');
+      const key = metric === 'rise' ? 'sunrise' : 'sunset';
+      const top = sortedRank()[0];
+      const mine = rankData.items.find((it) => it.location === place);
+      const diff = Math.abs(toMin(mine[key]) - toMin(top[key]));
+      const what = metric === 'rise' ? '해가 빨리 뜨는' : '해가 늦게 지는';
+      $('mine').innerHTML = `<span class="no">${li.dataset.rank}위</span><span><b>${place}</b> · 64곳 중 ${what} 순위<br>` +
+        `<small style="color:var(--muted)">${diff ? `1위 ${top.location}보다 ${diff}분 ${metric === 'rise' ? '늦게 뜸' : '일찍 짐'}` : '전국에서 가장 ' + (metric === 'rise' ? '빨리 뜹니다' : '늦게 집니다')}</small></span>`;
+      // 목록 상자 안에서만 스크롤 (화면 전체는 움직이지 않음)
+      if (scrollList) ul.scrollTop = li.offsetTop - ul.clientHeight / 2 + li.clientHeight / 2;
+    }
+
+    $('rlist').addEventListener('click', (e) => {
+      const li = e.target.closest('li');
+      if (li) selectPlace(li.dataset.name, 'rank');
+    });
+    $('rlist').addEventListener('mousedown', (e) => { if (e.target.closest('li')) e.preventDefault(); });
+
+    // ---------- 월별 ----------
     const startYear = kstParts().y;
-    const MIN_M = startYear * 12;            // 올해 1월
-    const MAX_M = (startYear + 1) * 12 + 11; // 내년 12월
-    let mIndex = (() => { const p = kstParts(); return p.y * 12 + p.m - 1; })(); // 처음엔 이번 달
+    const MIN_M = startYear * 12, MAX_M = (startYear + 1) * 12 + 11;
+    let mIndex = (() => { const p = kstParts(); return p.y * 12 + p.m - 1; })();
     let mMode = store.get('monthMode') === 'table' ? 'table' : 'cal';
     let mReq = 0;
     const monthCache = new Map();
-
     const ymOf = (i) => `${Math.floor(i / 12)}${String((i % 12) + 1).padStart(2, '0')}`;
 
-    async function fetchMonth(ym, loc) {
-      const key = `${ym}|${loc}`;
-      if (monthCache.has(key)) return monthCache.get(key);
-      const res = await fetch(`/api/month?location=${encodeURIComponent(loc)}&ym=${ym}`);
-      let data;
-      try { data = await res.json(); } catch { data = null; }
-      if (!res.ok || !data) throw new Error((data && data.error) || `서버 오류가 발생했습니다. (${res.status})`);
-      monthCache.set(key, data);
-      return data;
-    }
-
-    function dayClasses(date, wd) {
-      const c = [];
+    function dayClasses(date) {
+      const wd = weekdayOf(date), c = [];
       if (wd === 0) c.push('sun');
       if (wd === 6) c.push('sat');
       if (date === todayStr) c.push('today');
@@ -442,86 +765,92 @@
       if (date.endsWith('1231')) c.push('ye');
       return c.join(' ');
     }
-    const weekdayOf = (date) => new Date(Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8))).getUTCDay();
 
     function renderMonth(data) {
-      const body = $('mBody');
       if (mMode === 'cal') {
-        let html = '<div class="cal">' +
-          '일월화수목금토'.split('').map((w, i) => `<div class="wd ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</div>`).join('');
-        const first = weekdayOf(data.days[0].date);
-        for (let i = 0; i < first; i++) html += '<div class="day blank"></div>';
+        let html = '<div class="cal">' + '일월화수목금토'.split('').map((w, i) => `<div class="wd ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</div>`).join('');
+        for (let i = 0; i < weekdayOf(data.days[0].date); i++) html += '<div class="day blank"></div>';
         for (const d of data.days) {
-          const wd = weekdayOf(d.date);
-          html += `<div class="day ${dayClasses(d.date, wd)}" title="${prettyDate(d.date)}">` +
-            `<span class="n">${+d.date.slice(6)}</span>` +
-            `<span class="r">${d.sunrise}</span><span class="s">${d.sunset}</span></div>`;
+          html += `<div class="day ${dayClasses(d.date)}" title="${prettyDate(d.date)} · 해 뜨는 시각 ${d.sunrise} · 해 지는 시각 ${d.sunset}">` +
+            `<span class="n">${+d.date.slice(6)}</span><span class="r">${d.sunrise}</span><span class="s">${d.sunset}</span></div>`;
         }
-        body.innerHTML = html + '</div>';
+        $('mBody').innerHTML = html + '</div>';
       } else {
-        let html = '<table class="mtable"><thead><tr><th>날짜</th><th>해 뜨는 시각</th><th>해 지는 시각</th><th>낮 길이</th></tr></thead><tbody>';
+        let html = '<div class="tablewrap"><table class="mtable"><thead><tr><th>날짜</th><th>해 뜨는 시각</th><th>해 지는 시각</th><th>낮 길이</th></tr></thead><tbody>';
         for (const d of data.days) {
-          const wd = weekdayOf(d.date);
-          const len = (kstTime(d.date, d.sunset) - kstTime(d.date, d.sunrise)) / 60000;
-          html += `<tr class="${dayClasses(d.date, wd)}"><td>${+d.date.slice(4, 6)}월 ${+d.date.slice(6)}일 (${'일월화수목금토'[wd]})</td>` +
-            `<td class="r">${d.sunrise}</td><td class="s">${d.sunset}</td><td>${fmtDuration(len)}</td></tr>`;
+          html += `<tr class="${dayClasses(d.date)}"><td>${+d.date.slice(4, 6)}월 ${+d.date.slice(6)}일 (${'일월화수목금토'[weekdayOf(d.date)]})</td>` +
+            `<td class="r">${d.sunrise}</td><td class="s">${d.sunset}</td><td>${fmtDuration(toMin(d.sunset) - toMin(d.sunrise))}</td></tr>`;
         }
-        body.innerHTML = html + '</tbody></table>';
+        $('mBody').innerHTML = html + '</tbody></table></div>';
       }
     }
 
     async function loadMonth() {
       const id = ++mReq;
-      const ym = ymOf(mIndex);
+      const ym = ymOf(mIndex), key = `${ym}|${place}`;
       $('mPlace').textContent = `· ${place}`;
       $('mTitle').textContent = `${ym.slice(0, 4)}년 ${+ym.slice(4)}월`;
       $('mPrev').disabled = mIndex <= MIN_M;
       $('mNext').disabled = mIndex >= MAX_M;
-      document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mMode)));
-      const key = `${ym}|${place}`;
+      document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mMode)));
       if (!monthCache.has(key)) {
-        $('mStatus').className = 'status';
-        $('mStatus').textContent = '한 달치를 하루씩 불러오는 중… (처음엔 10초쯤 걸려요)';
+        clearStatus($('mStatus'), '한 달치를 하루씩 불러오는 중… (처음엔 10초쯤 걸려요)');
         $('mBody').style.opacity = '0.35';
+        monthCache.set(key, getJSON(`/api/month?location=${encodeURIComponent(place)}&ym=${ym}`).catch((e) => { monthCache.delete(key); throw e; }));
       }
       try {
-        const data = await fetchMonth(ym, place);
+        const data = await monthCache.get(key);
         if (id !== mReq) return;
         renderMonth(data);
-        $('mStatus').textContent = '';
+        clearStatus($('mStatus'));
       } catch (e) {
         if (id !== mReq) return;
         $('mBody').innerHTML = '';
-        $('mStatus').className = 'status error';
-        $('mStatus').textContent = '⚠️ ' + (e instanceof TypeError ? '네트워크에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.' : e.message);
+        showError($('mStatus'), e);
       } finally {
         if (id === mReq) $('mBody').style.opacity = '';
       }
     }
 
-    $('mPrev').addEventListener('click', () => { if (mIndex > MIN_M) { mIndex--; loadMonth(); } });
-    $('mNext').addEventListener('click', () => { if (mIndex < MAX_M) { mIndex++; loadMonth(); } });
-    document.querySelector('.seg').addEventListener('click', (e) => {
-      const b = e.target.closest('button');
-      if (!b || b.dataset.mode === mMode) return;
-      mMode = b.dataset.mode;
-      store.set('monthMode', mMode);
-      loadMonth();
-    });
-
-    // ---- 시작 ----
+    // ---------- 이벤트 ----------
     document.querySelector('.views').addEventListener('click', (e) => {
       const b = e.target.closest('button');
       if (!b || b.dataset.view === view) return;
       view = b.dataset.view;
       store.set('view', view);
-      renderHeader();
+      metric = view === 'lastsunset' ? 'set' : 'rise';
+      renderTop();
       load();
+      loadRank();
     });
+    document.querySelectorAll('[data-pick]').forEach((b) => b.addEventListener('click', () => setPickMode(b.dataset.pick)));
+    document.querySelectorAll('[data-metric]').forEach((b) => b.addEventListener('click', () => {
+      if (metric === b.dataset.metric) return;
+      metric = b.dataset.metric;
+      document.querySelectorAll('[data-metric]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.metric === metric)));
+      renderRank();
+      paintMap();
+    }));
+    document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
+      if (mMode === b.dataset.mode) return;
+      mMode = b.dataset.mode;
+      store.set('monthMode', mMode);
+      loadMonth();
+    }));
+    $('mPrev').addEventListener('click', () => { if (mIndex > MIN_M) { mIndex--; loadMonth(); } });
+    $('mNext').addEventListener('click', () => { if (mIndex < MAX_M) { mIndex++; loadMonth(); } });
+    $('search').addEventListener('input', applySearch);
 
-    renderHeader();
-    buildPicker();
+    // ---------- 시작 ----------
+    renderTop();
+    buildMap();
+    buildList();
+    setPickMode(pickMode);
+    $('chosen').textContent = place;
+    document.querySelectorAll('#groups .chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.name === place)));
+    paintMap();
     load();
+    loadRank();
     loadMonth();
     setInterval(tick, 1000);
   </script>
