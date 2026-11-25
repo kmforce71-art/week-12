@@ -1,0 +1,11 @@
+# 비밀 파일 (인증키)
+.env
+.env.*
+!.env.example
+
+# Vercel / Node
+.vercel
+node_modules
+
+.vercel
+.env*
