@@ -81,6 +81,45 @@
     .empty { color: var(--muted); margin: 14px 0 0; font-size: 0.92rem; }
     [hidden] { display: none !important; }
 
+    /* 월별 */
+    .mhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .mhead h2 { font-size: 1rem; margin: 0; }
+    .mhead h2 span { color: var(--muted); font-weight: 600; }
+    .seg { display: inline-flex; background: #eef0f5; border-radius: 10px; padding: 3px; }
+    .seg button { border: 0; background: transparent; font: inherit; font-size: 0.88rem; padding: 5px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
+    .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+    .mnav { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 6px; }
+    .mnav b { font-size: 1.1rem; }
+    .mnav button { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 6px 10px; font: inherit; font-size: 0.88rem; cursor: pointer; }
+    .mnav button:disabled { opacity: 0.35; cursor: default; }
+
+    .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-top: 8px; }
+    .cal .wd { text-align: center; font-size: 0.78rem; color: var(--muted); padding: 4px 0; font-weight: 600; }
+    .cal .wd.sun, .cal .day.sun .n { color: #d64545; }
+    .cal .wd.sat, .cal .day.sat .n { color: #3b63c4; }
+    .cal .day { background: #f6f7fb; border-radius: 8px; padding: 4px 2px 5px; text-align: center; min-height: 58px;
+                border: 2px solid transparent; font-variant-numeric: tabular-nums; line-height: 1.25; }
+    .cal .day .n { font-size: 0.82rem; font-weight: 700; display: block; margin-bottom: 1px; }
+    .cal .day .r, .cal .day .s { display: block; font-size: 0.7rem; letter-spacing: -0.02em; }
+    .cal .day .r { color: var(--sun); }
+    .cal .day .s { color: var(--moon); }
+    .cal .blank { background: transparent; }
+    .day.today, tr.today td { background: #ffe8d6 !important; }
+    .day.ny { border-color: var(--sun); }
+    .day.ye { border-color: var(--moon); }
+
+    .mtable { width: 100%; border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+    .mtable th { text-align: left; font-size: 0.8rem; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+    .mtable td { padding: 6px 8px; border-bottom: 1px solid #f0f1f5; }
+    .mtable td.r { color: var(--sun); font-weight: 600; }
+    .mtable td.s { color: var(--moon); font-weight: 600; }
+    .mtable tr.sun td:first-child { color: #d64545; }
+    .mtable tr.sat td:first-child { color: #3b63c4; }
+    .mtable tr.ny td { border-top: 2px solid var(--sun); border-bottom: 2px solid var(--sun); }
+    .mtable tr.ye td { border-top: 2px solid var(--moon); border-bottom: 2px solid var(--moon); }
+    .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; font-size: 0.78rem; color: var(--muted); }
+    .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
+
     footer { margin-top: 24px; color: rgba(255,255,255,0.92); font-size: 0.85rem; text-align: center; }
   </style>
 </head>
@@ -124,6 +163,30 @@
       <input class="search" id="search" type="search" placeholder="지역 이름 검색 (예: 강릉, 제주)" autocomplete="off" aria-label="지역 이름 검색" />
       <div id="groups"></div>
       <p class="empty" id="empty" hidden>검색 결과가 없습니다.</p>
+    </section>
+
+    <section class="card" id="monthCard">
+      <div class="mhead">
+        <h2>월별 일출 · 일몰 <span id="mPlace"></span></h2>
+        <div class="seg" role="group" aria-label="월별 보기 방식">
+          <button type="button" data-mode="cal">달력</button>
+          <button type="button" data-mode="table">표</button>
+        </div>
+      </div>
+      <div class="mnav">
+        <button type="button" id="mPrev" aria-label="이전 달">◀ 이전 달</button>
+        <b id="mTitle"></b>
+        <button type="button" id="mNext" aria-label="다음 달">다음 달 ▶</button>
+      </div>
+      <p class="status" id="mStatus" role="status"></p>
+      <div id="mBody"></div>
+      <div class="legend">
+        <span><i style="background:#ffe8d6"></i>오늘</span>
+        <span><i style="border:2px solid var(--sun)"></i>1월 1일</span>
+        <span><i style="border:2px solid var(--moon)"></i>12월 31일</span>
+        <span style="color:var(--sun)">■ 해 뜨는 시각</span>
+        <span style="color:var(--moon)">■ 해 지는 시각</span>
+      </div>
     </section>
   </main>
 
@@ -234,6 +297,7 @@
         place = b.dataset.name;
         store.set('location', place);
         load();
+        loadMonth();
       });
       // 버튼을 누를 때 포커스 때문에 스크롤되지 않도록
       wrap.addEventListener('mousedown', (e) => { if (e.target.closest('.chip')) e.preventDefault(); });
@@ -334,7 +398,7 @@
     // ---- 1초마다 남은 시간 갱신 ----
     function tick() {
       const p = kstParts();
-      if (ymd(p.y, p.m, p.d) !== todayStr) { renderHeader(); load(); return; } // 자정이 지나면 새로 계산
+      if (ymd(p.y, p.m, p.d) !== todayStr) { renderHeader(); load(); loadMonth(); return; } // 자정이 지나면 새로 계산
       if (!current) return;
       const left = current.target - Date.now();
       if (left <= 0) {
@@ -346,6 +410,104 @@
       $('cdLabel').textContent = current.label + ' 남은 시간';
       $('countdown').textContent = fmtLeft(left);
     }
+
+    // ---- 월별 일출·일몰 ----
+    const startYear = kstParts().y;
+    const MIN_M = startYear * 12;            // 올해 1월
+    const MAX_M = (startYear + 1) * 12 + 11; // 내년 12월
+    let mIndex = (() => { const p = kstParts(); return p.y * 12 + p.m - 1; })(); // 처음엔 이번 달
+    let mMode = store.get('monthMode') === 'table' ? 'table' : 'cal';
+    let mReq = 0;
+    const monthCache = new Map();
+
+    const ymOf = (i) => `${Math.floor(i / 12)}${String((i % 12) + 1).padStart(2, '0')}`;
+
+    async function fetchMonth(ym, loc) {
+      const key = `${ym}|${loc}`;
+      if (monthCache.has(key)) return monthCache.get(key);
+      const res = await fetch(`/api/month?location=${encodeURIComponent(loc)}&ym=${ym}`);
+      let data;
+      try { data = await res.json(); } catch { data = null; }
+      if (!res.ok || !data) throw new Error((data && data.error) || `서버 오류가 발생했습니다. (${res.status})`);
+      monthCache.set(key, data);
+      return data;
+    }
+
+    function dayClasses(date, wd) {
+      const c = [];
+      if (wd === 0) c.push('sun');
+      if (wd === 6) c.push('sat');
+      if (date === todayStr) c.push('today');
+      if (date.endsWith('0101')) c.push('ny');
+      if (date.endsWith('1231')) c.push('ye');
+      return c.join(' ');
+    }
+    const weekdayOf = (date) => new Date(Date.UTC(+date.slice(0, 4), +date.slice(4, 6) - 1, +date.slice(6, 8))).getUTCDay();
+
+    function renderMonth(data) {
+      const body = $('mBody');
+      if (mMode === 'cal') {
+        let html = '<div class="cal">' +
+          '일월화수목금토'.split('').map((w, i) => `<div class="wd ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</div>`).join('');
+        const first = weekdayOf(data.days[0].date);
+        for (let i = 0; i < first; i++) html += '<div class="day blank"></div>';
+        for (const d of data.days) {
+          const wd = weekdayOf(d.date);
+          html += `<div class="day ${dayClasses(d.date, wd)}" title="${prettyDate(d.date)}">` +
+            `<span class="n">${+d.date.slice(6)}</span>` +
+            `<span class="r">${d.sunrise}</span><span class="s">${d.sunset}</span></div>`;
+        }
+        body.innerHTML = html + '</div>';
+      } else {
+        let html = '<table class="mtable"><thead><tr><th>날짜</th><th>해 뜨는 시각</th><th>해 지는 시각</th><th>낮 길이</th></tr></thead><tbody>';
+        for (const d of data.days) {
+          const wd = weekdayOf(d.date);
+          const len = (kstTime(d.date, d.sunset) - kstTime(d.date, d.sunrise)) / 60000;
+          html += `<tr class="${dayClasses(d.date, wd)}"><td>${+d.date.slice(4, 6)}월 ${+d.date.slice(6)}일 (${'일월화수목금토'[wd]})</td>` +
+            `<td class="r">${d.sunrise}</td><td class="s">${d.sunset}</td><td>${fmtDuration(len)}</td></tr>`;
+        }
+        body.innerHTML = html + '</tbody></table>';
+      }
+    }
+
+    async function loadMonth() {
+      const id = ++mReq;
+      const ym = ymOf(mIndex);
+      $('mPlace').textContent = `· ${place}`;
+      $('mTitle').textContent = `${ym.slice(0, 4)}년 ${+ym.slice(4)}월`;
+      $('mPrev').disabled = mIndex <= MIN_M;
+      $('mNext').disabled = mIndex >= MAX_M;
+      document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mMode)));
+      const key = `${ym}|${place}`;
+      if (!monthCache.has(key)) {
+        $('mStatus').className = 'status';
+        $('mStatus').textContent = '한 달치를 하루씩 불러오는 중… (처음엔 10초쯤 걸려요)';
+        $('mBody').style.opacity = '0.35';
+      }
+      try {
+        const data = await fetchMonth(ym, place);
+        if (id !== mReq) return;
+        renderMonth(data);
+        $('mStatus').textContent = '';
+      } catch (e) {
+        if (id !== mReq) return;
+        $('mBody').innerHTML = '';
+        $('mStatus').className = 'status error';
+        $('mStatus').textContent = '⚠️ ' + (e instanceof TypeError ? '네트워크에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.' : e.message);
+      } finally {
+        if (id === mReq) $('mBody').style.opacity = '';
+      }
+    }
+
+    $('mPrev').addEventListener('click', () => { if (mIndex > MIN_M) { mIndex--; loadMonth(); } });
+    $('mNext').addEventListener('click', () => { if (mIndex < MAX_M) { mIndex++; loadMonth(); } });
+    document.querySelector('.seg').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b || b.dataset.mode === mMode) return;
+      mMode = b.dataset.mode;
+      store.set('monthMode', mMode);
+      loadMonth();
+    });
 
     // ---- 시작 ----
     document.querySelector('.views').addEventListener('click', (e) => {
@@ -360,6 +522,7 @@
     renderHeader();
     buildPicker();
     load();
+    loadMonth();
     setInterval(tick, 1000);
   </script>
 </body>

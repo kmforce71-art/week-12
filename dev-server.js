@@ -14,6 +14,7 @@ if (fs.existsSync(envFile)) {
 }
 
 const sunrise = require('./api/sunrise.js');
+const month = require('./api/month.js');
 const PORT = Number(process.env.PORT) || 3000;
 
 http
@@ -21,6 +22,7 @@ http
     const { pathname } = new URL(req.url, 'http://localhost');
     try {
       if (pathname === '/api/sunrise') return await sunrise(req, res);
+      if (pathname === '/api/month') return await month(req, res);
       if (pathname === '/' || pathname === '/index.html') {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         return res.end(fs.readFileSync(path.join(__dirname, 'index.html')));
